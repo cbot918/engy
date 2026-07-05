@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Prompt {
+  id         String   @id @default(cuid())
+  type       String // argumentative | business_email | business_report | debate_motion | free
+  title      String
+  body       String // 題目說明 / 情境
+  difficulty String   @default("medium") // easy | medium | hard
+  tags       String   @default("") // 逗號分隔
+  createdAt  DateTime @default(now())
+  essays     Essay[]
+}
+
+model Essay {
+  id          String       @id @default(cuid())
+  promptId    String?
+  prompt      Prompt?      @relation(fields: [promptId], references: [id])
+  content     String
+  wordCount   Int
+  durationSec Int? // 限時模式用；null = 不限時
+  createdAt   DateTime     @default(now())
+  feedback    Feedback[]
+  phraseCards PhraseCard[]
+}
+
+model Feedback {
+  id                String   @id @default(cuid())
+  essayId           String
+  essay             Essay    @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  model             String // 實際使用的模型 id
+  raw               String // 原始 JSON 字串（除錯/稽核用）
+  taskResponse      Float
+  coherenceCohesion Float
+  lexicalResource   Float
+  grammaticalRange  Float
+  overallBand       Float
+  toeicWritingEst   Int? // TOEIC Writing 估分 0-200
+  createdAt         DateTime @default(now())
+}
+
+model PhraseCard {
+  id        String   @id @default(cuid())
+  original  String // 你原本寫的
+  upgraded  String // 建議的更 native 說法
+  note      String // 為什麼更好
+  essayId   String?
+  essay     Essay?   @relation(fields: [essayId], references: [id])
+  // 間隔複習 (SM-2 簡化)
+  dueAt     DateTime @default(now())
+  interval  Int      @default(0) // 天
+  ease      Float    @default(2.5)
+  reps      Int      @default(0)
+  createdAt DateTime @default(now())
+}
